@@ -1,0 +1,73 @@
+ERRORS AND FIXES
+================
+
+1. TypeScript Error: Could not find declaration file for '@xyflow/react'
+   Error: 'c:/Users/Mini/OneDrive/문서/dev/study/cs_journey/react/react-libraries/React-Flow/node_modules/@xyflow/react/dist/esm/index.js' implicitly has an 'any' type.
+
+   Cause: TypeScript declaration files were missing from the installed package.
+
+   Fix: Reinstalled node_modules to get the proper TypeScript declaration files:
+   ```
+   rm -rf node_modules && npm install
+   ```
+   Then restarted TypeScript server in VS Code.
+
+2. Tailwind Dynamic Classes Not Working
+   Error: Dynamic Tailwind classes like `bg-[${data.color}]` not rendering correctly.
+
+   Cause: Tailwind CSS doesn't recognize dynamic classes at build time due to purging.
+
+   Fix: Used inline styles instead:
+   ```jsx
+   // Before (not working)
+   <div className={`bg-[${data.color}]`}>{data.value}</div>
+
+   // After (working)
+   <div style={{ backgroundColor: data.color }}>{data.value}</div>
+   ```
+
+3. React State Update Pattern
+   Issue: How to update a specific object in an array without removing and re-adding it.
+
+   Solution: Use map() with spread operator for immutable updates:
+   ```jsx
+   setNodes(prev => prev.map(node =>
+     node.id === '1'
+       ? { ...node, data: { ...node.data, color: 'red' } }
+       : node
+   ))
+   ```
+   This pattern preserves all existing properties while only updating what's needed.
+
+4. State Updates Inside State Callbacks Causing Unexpected Behavior
+   Issue: Calling setState inside another setState callback caused position to increment by 200 instead of 100.
+
+   Cause: Stale closure - the currPosition value gets captured when the function is created, and calling setCurrPosition inside setNodes callback creates timing issues.
+
+   Fix: Move state updates outside of other state callbacks:
+   ```jsx
+   // Before (problematic)
+   function HandleClick() {
+     setNodes((prev) => {
+       const newNode = { position: { x: currPosition, y: 0 } };
+       setCurrPosition((prev) => (prev += 100)); // Inside callback
+       return [...prev, newNode];
+     });
+   }
+
+   // After (working)
+   function HandleClick() {
+     setNodes((prev) => {
+       const newNode = { position: { x: currPosition, y: 0 } };
+       return [...prev, newNode];
+     });
+     setCurrPosition(prev => prev + 100); // Outside callback
+   }
+   ```
+
+5. React StrictMode Double Console Logs
+   Issue: console.log() statements appearing twice in development.
+
+   Cause: React.StrictMode intentionally double-renders components in development to help detect side effects.
+
+   Solution: This is expected behavior in development. It only happens in dev mode, not production. Keep StrictMode enabled as it helps catch bugs.
