@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+@import url("./styles/xy-theme.css");
+
+:root {
+  width: 100vw;
+  min-width: 100vh;
+}
