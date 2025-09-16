@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -8,6 +8,8 @@ import {
   BaseEdge,
   type OnConnect,
   Controls,
+  useReactFlow,
+  ReactFlowProvider,
 } from "@xyflow/react";
 import { initialNodes, initialEdges } from "./WorkflowConstants";
 import TestNode from "./TestNode";
@@ -16,8 +18,8 @@ const nodeTypes = {
   testNode: TestNode,
 };
 
-function Workflow() {
-  const [currPosition, setCurrPosition] = useState(200);
+function WorkflowContent() {
+  const { fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
@@ -26,23 +28,39 @@ function Workflow() {
     [setEdges]
   );
 
-  function HandleClick() {
+  function AddNode() {
+    let lastNodePos = { x: 0, y: 0 };
+    let newPos = { x: 0, y: 0 };
     setNodes((prev) => {
-      console.log(currPosition);
+      lastNodePos = prev[prev.length - 1]?.position;
+      console.log(lastNodePos);
+      newPos = { ...lastNodePos, x: lastNodePos.x + 200 };
       const newNode = {
         id: `${prev.length + 1}`,
-        position: { x: currPosition, y: 0 },
+        position: newPos,
         data: { value: "test node", color: "#D9E9CF" },
-        type: "testNode",
+        type: "testNode", 
       };
-      return [...prev, newNode];
+      return [...prev, newNode];                      
     });
-    setCurrPosition((prev) => prev + 200);
   }
+
+  function DeleteNode() {
+    setNodes((prev) => {
+      if (prev.length === 0) return prev;
+      const newNodes = [...prev];
+      newNodes.pop();
+      return newNodes;
+    });
+  }
+
+  useEffect(() => {
+    fitView();
+  }, [nodes, edges]);
 
   return (
     <>
-      <div className="w-[500px] h-[500px]">
+      <div className="w-[750px] h-[750px] border">
         <ReactFlow
           className=""
           nodes={nodes}
@@ -58,9 +76,23 @@ function Workflow() {
         </ReactFlow>
       </div>
       <div>
-        <button onClick={HandleClick}>add node</button>
+        <button className="border" onClick={AddNode}>
+          add node
+        </button>
+        <br />
+        <button className="border" onClick={DeleteNode}>
+          delete node
+        </button>
       </div>
     </>
+  );
+}
+
+function Workflow() {
+  return (
+    <ReactFlowProvider>
+      <WorkflowContent />
+    </ReactFlowProvider>
   );
 }
 

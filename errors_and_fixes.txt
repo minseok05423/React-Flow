@@ -71,3 +71,93 @@ ERRORS AND FIXES
    Cause: React.StrictMode intentionally double-renders components in development to help detect side effects.
 
    Solution: This is expected behavior in development. It only happens in dev mode, not production. Keep StrictMode enabled as it helps catch bugs.
+
+6. AddNode function bug:
+   ERROR:
+   ```
+   function AddNode() {
+     setNodes((prev) => {
+       lastNodePos = prev.pop()?.position;
+       // ... rest of code
+     });
+   }
+   ```
+
+   ISSUE: Using pop() mutates the prev array by removing the last element,
+   then spreading [...prev, newNode] adds to the already-modified array,
+   causing the original last node to disappear.
+
+   FIX:
+   ```
+   function AddNode() {
+     setNodes((prev) => {
+       const lastNodePos = prev[prev.length - 1]?.position;
+       const newNode = {
+         id: `${prev.length + 1}`,
+         position: { ...lastNodePos, x: (lastNodePos?.x || 0) + 200 },
+         data: { value: "test node", color: "#D9E9CF" },
+         type: "testNode",
+       };
+       return [...prev, newNode];
+     });
+   }
+   ```
+
+7. DeleteNode function bug:
+   ERROR:
+   ```
+   function DeleteNode() {
+     setNodes((prev) =>
+       prev.length !== 0 ?
+       prev.pop() : prev;
+     );
+   }
+   ```
+
+   ISSUE: pop() modifies the original array and returns the removed element,
+   not the modified array. This returns the popped element instead of the
+   updated nodes array, breaking React state updates.
+
+   FIX:
+   ```
+   function DeleteNode() {
+     setNodes((prev) => {
+       if (prev.length === 0) return prev;
+       const newNodes = [...prev];
+       newNodes.pop();
+       return newNodes;
+     });
+   }
+   ```
+
+   OR use slice():
+   ```
+   function DeleteNode() {
+     setNodes((prev) =>
+       prev.length !== 0 ?
+       prev.slice(0, -1) : prev
+     );
+   }
+   ```
+
+8. useReactFlow hook usage error:
+   ERROR:
+   ```
+   const { fitView } = useReactFlow;
+
+   function Workflow() {
+     // component code
+   }
+   ```
+
+   ISSUE: useReactFlow is a React hook that must be called inside a component,
+   not destructured outside of it. React hooks can only be used inside React
+   components or other custom hooks.
+
+   FIX:
+   ```
+   function Workflow() {
+     const { fitView } = useReactFlow();
+     // component code
+   }
+   ```
