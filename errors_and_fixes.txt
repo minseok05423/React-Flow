@@ -161,3 +161,57 @@ ERRORS AND FIXES
      // component code
    }
    ```
+
+9. useEffect with Promise return error:
+   ERROR:
+   ```
+   useEffect(() => fitView(), [nodes.length, fitView]);
+   ```
+
+   ISSUE: fitView() returns a Promise, and when using arrow function without
+   brackets, the Promise gets implicitly returned from useEffect. React expects
+   useEffect to return either undefined or a cleanup function, not a Promise.
+
+   FIX:
+   ```
+   useEffect(() => {
+     fitView();
+   }, [nodes.length, fitView]);
+   ```
+
+   EXPLANATION: The brackets {} create a function body where fitView() is
+   executed as a statement (not returned), so useEffect returns undefined
+   instead of the Promise.
+
+10. TypeScript array type syntax error:
+    ERROR:
+    ```
+    function AddNodeLayer(refNode: Node, nodeLayer: []{value: string, color: string}) {
+    ```
+
+    ISSUE: Incorrect TypeScript syntax for array types. The [] should come
+    after the type definition, not before it.
+
+    FIX:
+    ```
+    function AddNodeLayer(refNode: Node, nodeLayer: {value: string, color: string}[]) {
+    ```
+
+    EXPLANATION: TypeScript array syntax is Type[] or Array<Type>, not []Type.
+
+11. Object property mismatch error:
+    ERROR:
+    ```
+    const sampleLayer = [{"a"}, {"b"}, {"c"}];
+    // Used with function expecting: { value: string }[]
+    ```
+
+    ISSUE: Function expects objects with 'value' property, but array contains
+    objects with different property names ("a", "b", "c").
+
+    FIX:
+    ```
+    const sampleLayer = [{ value: "a" }, { value: "b" }, { value: "c" }];
+    ```
+
+    EXPLANATION: Object structure must match the TypeScript interface definition.

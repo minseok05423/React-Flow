@@ -5,45 +5,72 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
-  BaseEdge,
-  type OnConnect,
   Controls,
   useReactFlow,
   ReactFlowProvider,
+  MarkerType,
 } from "@xyflow/react";
-import { initialNodes, initialEdges } from "./WorkflowConstants";
+import type { Node, Edge, OnConnect } from "@xyflow/react";
+import { initialElements } from "./initialElements";
 import TestNode from "./TestNode";
+import RootNode from "./RootNode";
+import FloatingEdge from "./FloatingEdge";
+import FloatingConnectionLine from "./FloatingConnectionLine";
 
 const nodeTypes = {
+  rootNode: RootNode,
   testNode: TestNode,
 };
 
+const edgeTypes = {
+  floating: FloatingEdge,
+};
+
+const { initialNodes, initialEdges } = initialElements();
+
 function WorkflowContent() {
-  const { fitView } = useReactFlow();
+  const { addNodes, fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   const onConnect: OnConnect = useCallback(
-    (connection) => setEdges((eds) => addEdge(connection, eds)),
+    (params) =>
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            type: "floating",
+            markerEnd: { type: MarkerType.Arrow },
+          },
+          eds
+        )
+      ),
     [setEdges]
   );
 
-  function AddNode() {
-    let lastNodePos = { x: 0, y: 0 };
-    let newPos = { x: 0, y: 0 };
-    setNodes((prev) => {
-      lastNodePos = prev[prev.length - 1]?.position;
-      console.log(lastNodePos);
-      newPos = { ...lastNodePos, x: lastNodePos.x + 200 };
+  function AddNodeLayer(refNode: Node, nodeLayer: { value: string }[]) {
+    const lastNodePos = refNode.position;
+    const width = refNode.measured?.width || 0;
+    const height = refNode.measured?.height || 0;
+    for (let i = 0; i < nodeLayer.length; i++) {
       const newNode = {
-        id: `${prev.length + 1}`,
-        position: newPos,
-        data: { value: "test node", color: "#D9E9CF" },
-        type: "testNode", 
+        id: `${refNode.id}-${i}`,
+        position: {
+          x: lastNodePos.x + width + 200,
+          y:
+            lastNodePos.y -
+            (height * nodeLayer.length + 100 * (nodeLayer.length - 1)) / 2 +
+            i * (height + 100),
+        },
+        data: { value: nodeLayer[i].value, color: "#D9E9CF" },
+        type: "testNode",
       };
-      return [...prev, newNode];                      
-    });
+      addNodes(newNode);
+    }
   }
+
+  const sampleLayer = [{ value: "a" }, { value: "b" }, { value: "c" }];
+  const firstNode = initialNodes[0];
 
   function DeleteNode() {
     setNodes((prev) => {
@@ -56,7 +83,7 @@ function WorkflowContent() {
 
   useEffect(() => {
     fitView();
-  }, [nodes, edges]);
+  }, [nodes.length]);
 
   return (
     <>
@@ -66,6 +93,8 @@ function WorkflowContent() {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          connectionLineComponent={FloatingConnectionLine}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -76,7 +105,10 @@ function WorkflowContent() {
         </ReactFlow>
       </div>
       <div>
-        <button className="border" onClick={AddNode}>
+        <button
+          className="border"
+          onClick={() => AddNodeLayer(firstNode, sampleLayer)}
+        >
           add node
         </button>
         <br />
@@ -95,5 +127,7 @@ function Workflow() {
     </ReactFlowProvider>
   );
 }
+
+// ReactFlowProvider acts as a context provider
 
 export default Workflow;

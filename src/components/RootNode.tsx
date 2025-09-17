@@ -8,9 +8,9 @@ import {
 import Cancel from "../assets/cancel.svg?react";
 import { useState } from "react";
 
-type TestNode = Node<{ value: string; color: string }, "custom">;
+type RootNode = Node<{ value: string; color: string }, "custom">;
 
-export default function TestNode({ id, data }: NodeProps<TestNode>) {
+export default function TestNode({ id, data }: NodeProps<RootNode>) {
   const { setNodes } = useReactFlow();
 
   return (
