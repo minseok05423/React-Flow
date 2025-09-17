@@ -104,6 +104,7 @@ export function initialElements(): {
     data: { value: "root node", color: "#D9E9CF" },
     position: center,
     type: "rootNode",
+    deletable: false,
   });
 
   return { initialNodes, initialEdges };

@@ -5,14 +5,14 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import Cancel from "../assets/cancel.svg?react";
+import Cancel from "../../assets/cancel.svg?react";
 
-type SuggestionNode = Node<{ value: string; color: string }, "custom">;
+type DefaultNode = Node<{ value: string; color: string }, "custom">;
 
-export default function SuggestionNode({
+export default function DefaultNode({
   id,
-  data: { value, color = "#F0F0F0" },
-}: NodeProps<SuggestionNode>) {
+  data: { value, color = "#D9E9CF" },
+}: NodeProps<DefaultNode>) {
   const { setNodes } = useReactFlow();
 
   return (

@@ -5,7 +5,7 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import Cancel from "../assets/cancel.svg?react";
+import Cancel from "../../assets/cancel.svg?react";
 import { useState } from "react";
 
 type TextNode = Node<{ value: string; color: string }, "custom">;

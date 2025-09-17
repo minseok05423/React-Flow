@@ -215,3 +215,34 @@ ERRORS AND FIXES
     ```
 
     EXPLANATION: Object structure must match the TypeScript interface definition.
+
+12. React Context naming conflict and type mismatch error:
+    ERROR:
+    ```
+    import { nodeContext } from "./context/NodeContext";
+    const [nodeContext, setNodeContext] = useState<{...}>({});
+    <nodeContext.Provider value={{ nodeContext, setNodeContext }}>
+    ```
+
+    ISSUES:
+    1. Variable name conflict between imported context and state variable
+    2. Type mismatch - context expects { nodeInfo: {}, setNodeInfo: (info: {}) => void }
+    3. Complex typing making code hard to understand
+
+    FIX:
+    ```
+    import { nodeContext } from "./context/NodeContext";
+    const [context, setContext] = useState({ nodeInfo: {} });
+    <nodeContext.Provider
+      value={{
+        nodeInfo: context.nodeInfo,
+        setNodeInfo: (info) => setContext({ nodeInfo: info }),
+      }}
+    >
+    ```
+
+    EXPLANATION:
+    - Rename state variable to avoid naming conflict
+    - Remove complex TypeScript types for simplicity
+    - Match context interface by passing nodeInfo and setNodeInfo properties
+    - Create wrapper function to transform setContext signature

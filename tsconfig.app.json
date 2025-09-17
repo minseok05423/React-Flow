@@ -23,5 +23,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "src/components/initialElements.tsx"]
+  "include": ["src", "src/components/Flow/initialElements.tsx"]
 }

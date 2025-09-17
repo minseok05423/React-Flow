@@ -11,13 +11,13 @@ import {
   MarkerType,
 } from "@xyflow/react";
 import type { Node, Edge, OnConnect } from "@xyflow/react";
-import { initialElements } from "./initialElements";
-import SuggestionNode from "./SuggestionNode";
-import RootNode from "./RootNode";
-import TextNode from "./TextNode";
-import DefaultNode from "./DefaultNode";
-import FloatingEdge from "./FloatingEdge";
-import FloatingConnectionLine from "./FloatingConnectionLine";
+import { initialElements } from "./Flow/initialElements";
+import SuggestionNode from "./Flow/SuggestionNode";
+import RootNode from "./Flow/RootNode";
+import TextNode from "./Flow/TextNode";
+import DefaultNode from "./Flow/DefaultNode";
+import FloatingEdge from "./Flow/FloatingEdge";
+import FloatingConnectionLine from "./Flow/FloatingConnectionLine";
 
 const nodeTypes = {
   rootNode: RootNode,
@@ -44,6 +44,9 @@ function WorkflowContent() {
     (changes: any[]) => {
       // Handle selection changes
       changes.forEach((change) => {
+        if (change.type === "position") {
+          updateNode(change.id, { position: change.position });
+        }
         if (change.type === "select") {
           if (change.selected) {
             // Node was selected
@@ -84,15 +87,17 @@ function WorkflowContent() {
     nodeLayer: { value: string; type: string }[]
   ) {
     const lastNodePos = refNode.position;
+    console.log(refNode);
     const width = refNode.measured?.width || 0;
     const height = refNode.measured?.height || 0;
     for (let i = 0; i < nodeLayer.length; i++) {
       const newNode = {
         id: `${refNode.id}-${i}`,
         position: {
-          x: lastNodePos.x + width + 200,
+          x: lastNodePos.x + width + 100,
           y:
-            lastNodePos.y -
+            lastNodePos.y +
+            height / 2 -
             (height * nodeLayer.length + 100 * (nodeLayer.length - 1)) / 2 +
             i * (height + 100),
         },
@@ -116,7 +121,7 @@ function WorkflowContent() {
     { value: "b", type: "suggestionNode" },
     { value: "c", type: "textNode" },
   ];
-  const firstNode = initialNodes[0];
+  const firstNode = nodes[0];
 
   function DeleteNode() {
     setNodes((prev) => {
@@ -143,7 +148,7 @@ function WorkflowContent() {
   }, [suggestionSelectedNode]);
 
   useEffect(() => {
-    fitView();
+    fitView({ duration: 500 });
   }, [nodes.length]);
 
   return (

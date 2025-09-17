@@ -1,27 +1,18 @@
-import {
-  Handle,
-  Position,
-  useReactFlow,
-  type Node,
-  type NodeProps,
-} from "@xyflow/react";
-import Cancel from "../assets/cancel.svg?react";
+import { Handle, useReactFlow, type Node, type NodeProps } from "@xyflow/react";
+import Cancel from "../../assets/cancel.svg?react";
 
-type DefaultNode = Node<{ value: string; color: string }, "custom">;
+type RootNode = Node<{ value: string; color: string }, "custom">;
 
-export default function DefaultNode({
-  id,
-  data: { value, color = "#D9E9CF" },
-}: NodeProps<DefaultNode>) {
+export default function RootNode({ id, data }: NodeProps<RootNode>) {
   const { setNodes } = useReactFlow();
 
   return (
     <div
       className="text-[16px] px-[1rem] py-[0.5rem] rounded-2xl"
-      style={{ backgroundColor: color }}
+      style={{ backgroundColor: data.color }}
     >
       <div className="flex justify-center items-center gap-2">
-        <div className="border">{value}</div>
+        <div className="border">{data.value}</div>
         <button
           className="border"
           onClick={() =>
