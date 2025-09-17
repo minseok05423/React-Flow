@@ -12,14 +12,18 @@ import {
 } from "@xyflow/react";
 import type { Node, Edge, OnConnect } from "@xyflow/react";
 import { initialElements } from "./initialElements";
-import TestNode from "./TestNode";
+import SuggestionNode from "./SuggestionNode";
 import RootNode from "./RootNode";
+import TextNode from "./TextNode";
+import DefaultNode from "./DefaultNode";
 import FloatingEdge from "./FloatingEdge";
 import FloatingConnectionLine from "./FloatingConnectionLine";
 
 const nodeTypes = {
   rootNode: RootNode,
-  testNode: TestNode,
+  suggestionNode: SuggestionNode,
+  textNode: TextNode,
+  defaultNode: DefaultNode,
 };
 
 const edgeTypes = {
@@ -29,9 +33,36 @@ const edgeTypes = {
 const { initialNodes, initialEdges } = initialElements();
 
 function WorkflowContent() {
-  const { addNodes, fitView } = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const { addNodes, addEdges, deleteElements, updateNode, fitView } =
+    useReactFlow();
+  const [nodes, setNodes, defaultOnNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [suggestionSelectedNode, setSuggestionSelectedNode] =
+    useState<Node | null>(null);
+
+  const onNodesChange = useCallback(
+    (changes: any[]) => {
+      // Handle selection changes
+      changes.forEach((change) => {
+        if (change.type === "select") {
+          if (change.selected) {
+            // Node was selected
+            const node = nodes.find((n) => n.id === change.id);
+            setSuggestionSelectedNode(node || null);
+            console.log("Selected node:", node);
+          } else {
+            // Node was deselected
+            setSuggestionSelectedNode(null);
+            console.log("Node deselected");
+          }
+        }
+      });
+
+      // Apply default changes to update node state
+      defaultOnNodesChange(changes);
+    },
+    [nodes, defaultOnNodesChange]
+  );
 
   const onConnect: OnConnect = useCallback(
     (params) =>
@@ -48,7 +79,10 @@ function WorkflowContent() {
     [setEdges]
   );
 
-  function AddNodeLayer(refNode: Node, nodeLayer: { value: string }[]) {
+  function AddNodeLayer(
+    refNode: Node,
+    nodeLayer: { value: string; type: string }[]
+  ) {
     const lastNodePos = refNode.position;
     const width = refNode.measured?.width || 0;
     const height = refNode.measured?.height || 0;
@@ -62,14 +96,26 @@ function WorkflowContent() {
             (height * nodeLayer.length + 100 * (nodeLayer.length - 1)) / 2 +
             i * (height + 100),
         },
-        data: { value: nodeLayer[i].value, color: "#D9E9CF" },
-        type: "testNode",
+        data: { value: nodeLayer[i].value },
+        type: `${nodeLayer[i].type}`,
+      };
+      const newEdge = {
+        id: `${refNode.id}, ${refNode.id}-${i}`,
+        source: `${refNode.id}`,
+        target: `${refNode.id}-${i}`,
+        type: "floating",
+        animated: true,
       };
       addNodes(newNode);
+      addEdges(newEdge);
     }
   }
 
-  const sampleLayer = [{ value: "a" }, { value: "b" }, { value: "c" }];
+  const sampleLayer = [
+    { value: "a", type: "suggestionNode" },
+    { value: "b", type: "suggestionNode" },
+    { value: "c", type: "textNode" },
+  ];
   const firstNode = initialNodes[0];
 
   function DeleteNode() {
@@ -80,6 +126,21 @@ function WorkflowContent() {
       return newNodes;
     });
   }
+
+  useEffect(() => {
+    if (suggestionSelectedNode) {
+      nodes.map((node) => {
+        if (node.type === "suggestionNode") {
+          if (node.id !== suggestionSelectedNode.id) {
+            deleteElements({ nodes: [{ id: `${node.id}` }] });
+            console.log(node);
+          } else {
+            updateNode(node.id, { type: "defaultNode" });
+          }
+        }
+      });
+    }
+  }, [suggestionSelectedNode]);
 
   useEffect(() => {
     fitView();

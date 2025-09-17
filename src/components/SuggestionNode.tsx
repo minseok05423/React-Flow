@@ -7,18 +7,21 @@ import {
 } from "@xyflow/react";
 import Cancel from "../assets/cancel.svg?react";
 
-type RootNode = Node<{ value: string; color: string }, "custom">;
+type SuggestionNode = Node<{ value: string; color: string }, "custom">;
 
-export default function RootNode({ id, data }: NodeProps<RootNode>) {
+export default function SuggestionNode({
+  id,
+  data: { value, color = "#F0F0F0" },
+}: NodeProps<SuggestionNode>) {
   const { setNodes } = useReactFlow();
 
   return (
     <div
       className="text-[16px] px-[1rem] py-[0.5rem] rounded-2xl"
-      style={{ backgroundColor: data.color }}
+      style={{ backgroundColor: color }}
     >
       <div className="flex justify-center items-center gap-2">
-        <div className="border">{data.value}</div>
+        <div className="border">{value}</div>
         <button
           className="border"
           onClick={() =>
