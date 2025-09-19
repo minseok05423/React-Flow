@@ -314,3 +314,37 @@ ERRORS AND FIXES
 
     EXPLANATION: null is preferred because it forces proper Provider usage
     and prevents accidental usage outside of the Provider context.
+
+15. React StrictMode causing duplicate data due to state mutation:
+    ERROR:
+    ```
+    setContext((prev) => {
+      prev.push({ value: `${searchInput}`, children: null });
+      return prev;
+    });
+    ```
+
+    ISSUE: In StrictMode, React intentionally runs state setter functions twice
+    to detect side effects. Using push() mutates the original array, so running
+    twice adds the same data twice.
+
+    CAUSE: Direct mutation of state object instead of creating new object.
+    StrictMode double-execution reveals this side effect.
+
+    FIX:
+    ```
+    // Option 1: Spread operator (recommended)
+    setContext((prev) => [
+      ...prev,
+      { value: `${searchInput}`, children: null }
+    ]);
+
+    // Option 2: concat method
+    setContext((prev) =>
+      prev.concat({ value: `${searchInput}`, children: null })
+    );
+    ```
+
+    EXPLANATION: Immutable updates create new arrays instead of mutating existing ones.
+    When run twice, they produce the same result. This is the correct React pattern
+    and why StrictMode helps catch mutation bugs early.
