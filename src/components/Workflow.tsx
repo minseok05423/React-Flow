@@ -134,18 +134,11 @@ function WorkflowContent() {
         if (node.type === "suggestionNode") {
           if (node.id !== suggestionSelectedNode.id) {
             deleteElements({ nodes: [{ id: `${node.id}` }] });
-            console.log(node);
           } else {
             updateNode(node.id, { type: "defaultNode" });
           }
         }
       });
-    }
-  }, [suggestionSelectedNode]);
-
-  useEffect(() => {
-    if (suggestionSelectedNode?.type === "suggestionNode") {
-      async function name(params: type) {}
     }
   }, [suggestionSelectedNode]);
 
@@ -157,34 +150,32 @@ function WorkflowContent() {
   const [searchInput, setSearchInput] = useState("");
   const [context, setContext] = useState<TreeNode[]>([]);
 
-  function GetContext(refNode: Node, refContext: TreeNode[]) {
-    let nodeContext: string[] = [];
-    let path = refNode.id.split("-").map((a) => Number(a));
-    const p = (path: number[], refContext: TreeNode[] | null) => {
-      if (path && refContext) {
-        const pathValue = path.unshift();
-        nodeContext.push(refContext[pathValue].value);
-        p(path, refContext[pathValue].children);
-      } else if (path.length = 0) {
-        return nodeContext
-      }
-      p(path, refContext);
-    };
-    return nodeContext;
+  function GetContext(refNode: Node | null) {
+    if (refNode) {
+      let nodeContext: string[] = [];
+      let path = refNode.id.split("-").map((a) => Number(a));
+      console.log(path);
+      const p = (path: number[]) => {
+        if (path.length !== 0 && context) {
+          const pathValue = path.shift() ?? 0;
+          console.log(pathValue);
+          console.log(path);
+          console.log(context);
+          console.log(context[pathValue].children);
+          nodeContext.push(context[pathValue].value);
+          p(path);
+        } else if (path.length === 0) {
+          return nodeContext;
+        }
+      };
+
+      p(path);
+      return nodeContext;
+    }
   }
   // 0-1-2-3
 
-  const FetchRootData = async () => {
-    const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    const rootNode = {
-      id: `${context.length}`,
-      data: { value: `${searchInput}`, color: "#D9E9CF" },
-      position: center,
-      type: "rootNode",
-    };
-
-    addNodes(rootNode);
-
+  async function CreateLayer(refNode: Node) {
     let nodeLayer: { value: string; type: string }[] = [];
     const response = await CallDeepseek([searchInput]);
     console.log(response);
@@ -198,8 +189,34 @@ function WorkflowContent() {
       return prev;
     });
 
-    AddNodeLayer(rootNode, nodeLayer);
+    AddNodeLayer(refNode, nodeLayer);
+  }
+
+  const CreateRoot = async () => {
+    console.log(2);
+    const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const rootNode = {
+      id: `${context.length}`,
+      data: { value: `${searchInput}`, color: "#D9E9CF" },
+      position: center,
+      type: "rootNode",
+    };
+
+    setContext((prev) => {
+      prev.push({ value: `${searchInput}`, children: null });
+      return prev;
+    });
+
+    addNodes(rootNode);
+    CreateLayer(rootNode);
   };
+
+  useEffect(() => {
+    console.log(context);
+    const fin_context = GetContext(suggestionSelectedNode);
+    console.log(suggestionSelectedNode);
+    console.log(fin_context);
+  }, [nodes.length, suggestionSelectedNode]);
 
   const FetchSuggestionData = async (refNode: Node) => {
     let nodeLayer: { value: string; type: string }[] = [];
@@ -221,7 +238,8 @@ function WorkflowContent() {
   const HandleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    FetchRootData();
+    CreateRoot();
+    console.log(1);
     // you cannot immediately call an async function
   };
 
