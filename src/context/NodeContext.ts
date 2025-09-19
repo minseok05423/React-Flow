@@ -1,8 +1,9 @@
 import { useContext, createContext } from "react";
+import type { TreeNode } from "../types/tree";
 
 export const nodeContext = createContext<{
-  nodeInfo: {};
-  setNodeInfo: (info: {}) => void;
+  nodeInfo: TreeNode[];
+  setNodeInfo: (info: TreeNode[]) => void;
 } | null>(null);
 
 export function useNodeContext() {

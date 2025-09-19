@@ -18,6 +18,9 @@ import TextNode from "./Flow/TextNode";
 import DefaultNode from "./Flow/DefaultNode";
 import FloatingEdge from "./Flow/FloatingEdge";
 import FloatingConnectionLine from "./Flow/FloatingConnectionLine";
+import useDeepseekAPI from "../hooks/useDeepseekAPI";
+import Searchbar from "../components/SearchBar";
+import type { TreeNode } from "../types/tree";
 
 const nodeTypes = {
   rootNode: RootNode,
@@ -94,7 +97,7 @@ function WorkflowContent() {
       const newNode = {
         id: `${refNode.id}-${i}`,
         position: {
-          x: lastNodePos.x + width + 100,
+          x: lastNodePos.x + width + 200,
           y:
             lastNodePos.y +
             height / 2 -
@@ -115,13 +118,6 @@ function WorkflowContent() {
       addEdges(newEdge);
     }
   }
-
-  const sampleLayer = [
-    { value: "a", type: "suggestionNode" },
-    { value: "b", type: "suggestionNode" },
-    { value: "c", type: "textNode" },
-  ];
-  const firstNode = nodes[0];
 
   function DeleteNode() {
     setNodes((prev) => {
@@ -148,12 +144,95 @@ function WorkflowContent() {
   }, [suggestionSelectedNode]);
 
   useEffect(() => {
+    if (suggestionSelectedNode?.type === "suggestionNode") {
+      async function name(params: type) {}
+    }
+  }, [suggestionSelectedNode]);
+
+  useEffect(() => {
     fitView({ duration: 500 });
   }, [nodes.length]);
 
+  const { CallDeepseek } = useDeepseekAPI();
+  const [searchInput, setSearchInput] = useState("");
+  const [context, setContext] = useState<TreeNode[]>([]);
+
+  function GetContext(refNode: Node, refContext: TreeNode[]) {
+    let nodeContext: string[] = [];
+    let path = refNode.id.split("-").map((a) => Number(a));
+    const p = (path: number[], refContext: TreeNode[] | null) => {
+      if (path && refContext) {
+        const pathValue = path.unshift();
+        nodeContext.push(refContext[pathValue].value);
+        p(path, refContext[pathValue].children);
+      } else if (path.length = 0) {
+        return nodeContext
+      }
+      p(path, refContext);
+    };
+    return nodeContext;
+  }
+  // 0-1-2-3
+
+  const FetchRootData = async () => {
+    const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const rootNode = {
+      id: `${context.length}`,
+      data: { value: `${searchInput}`, color: "#D9E9CF" },
+      position: center,
+      type: "rootNode",
+    };
+
+    addNodes(rootNode);
+
+    let nodeLayer: { value: string; type: string }[] = [];
+    const response = await CallDeepseek([searchInput]);
+    console.log(response);
+
+    const content = response.choices[0].message.content.split(", ");
+    setContext((prev) => {
+      for (let i = 0; i < content.length; i++) {
+        prev.push({ value: content[i], children: null });
+        nodeLayer.push({ value: content[i], type: "suggestionNode" });
+      }
+      return prev;
+    });
+
+    AddNodeLayer(rootNode, nodeLayer);
+  };
+
+  const FetchSuggestionData = async (refNode: Node) => {
+    let nodeLayer: { value: string; type: string }[] = [];
+    const response = await CallDeepseek([searchInput]);
+    console.log(response);
+
+    const content = response.choices[0].message.content.split(", ");
+    setContext((prev) => {
+      for (let i = 0; i < content.length; i++) {
+        prev.push({ value: content[i], children: null });
+        nodeLayer.push({ value: content[i], type: "suggestionNode" });
+      }
+      return prev;
+    });
+
+    AddNodeLayer(refNode, nodeLayer);
+  };
+
+  const HandleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    FetchRootData();
+    // you cannot immediately call an async function
+  };
+
   return (
     <>
-      <div className="w-[750px] h-[750px] border">
+      <Searchbar
+        HandleSubmit={HandleSubmit}
+        searchInput={searchInput}
+        setSearchInput={setSearchInput}
+      />
+      <div className="w-[1500px] h-[750px] border">
         <ReactFlow
           className=""
           nodes={nodes}
@@ -170,18 +249,7 @@ function WorkflowContent() {
           <Controls />
         </ReactFlow>
       </div>
-      <div>
-        <button
-          className="border"
-          onClick={() => AddNodeLayer(firstNode, sampleLayer)}
-        >
-          add node
-        </button>
-        <br />
-        <button className="border" onClick={DeleteNode}>
-          delete node
-        </button>
-      </div>
+      <div></div>
     </>
   );
 }

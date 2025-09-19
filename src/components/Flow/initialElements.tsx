@@ -97,15 +97,6 @@ export function initialElements(): {
 } {
   const initialNodes: Node[] = [];
   const initialEdges: Edge[] = [];
-  const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-
-  initialNodes.push({
-    id: "0",
-    data: { value: "root node", color: "#D9E9CF" },
-    position: center,
-    type: "rootNode",
-    deletable: false,
-  });
 
   return { initialNodes, initialEdges };
 }

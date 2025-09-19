@@ -246,3 +246,71 @@ ERRORS AND FIXES
     - Remove complex TypeScript types for simplicity
     - Match context interface by passing nodeInfo and setNodeInfo properties
     - Create wrapper function to transform setContext signature
+
+13. Context Provider variable name mismatch error:
+    ERROR:
+    ```
+    const [context, setContext] = useState({});
+    <nodeContext.Provider
+      value={{
+        nodeInfo,      // undefined variable
+        setNodeInfo,   // undefined variable
+      }}
+    >
+    ```
+
+    ISSUE: Provider value references variables (nodeInfo, setNodeInfo) that don't exist.
+    The actual state variables are named context and setContext.
+
+    FIX:
+    ```
+    const [context, setContext] = useState({});
+    <nodeContext.Provider
+      value={{
+        nodeInfo: context,        // Pass context as nodeInfo
+        setNodeInfo: setContext,  // Pass setContext as setNodeInfo
+      }}
+    >
+    ```
+
+    EXPLANATION: The Provider value object must use the actual variable names
+    from your state, not the expected property names from the context interface.
+
+14. React Context default value type confusion:
+    ERROR:
+    ```
+    export const nodeContext = createContext<{
+      nodeInfo: TreeNode[];
+      setNodeInfo: (info: TreeNode[]) => void;
+    }>([]);  // Trying to use empty array as default
+    ```
+
+    ISSUE: Context expects an object with nodeInfo and setNodeInfo properties,
+    but an empty array [] was provided as the default value.
+
+    WHY NULL IS USED:
+    - Type mismatch: Context expects {nodeInfo, setNodeInfo} object, not array
+    - Missing function: [] doesn't have setNodeInfo method
+    - Forces Provider usage: null ensures components are wrapped in Provider
+    - Prevents silent bugs: Throws clear error if used outside Provider
+
+    CORRECT OPTIONS:
+    ```
+    // Option 1: Use null (recommended)
+    export const nodeContext = createContext<{
+      nodeInfo: TreeNode[];
+      setNodeInfo: (info: TreeNode[]) => void;
+    } | null>(null);
+
+    // Option 2: Provide full default object
+    export const nodeContext = createContext<{
+      nodeInfo: TreeNode[];
+      setNodeInfo: (info: TreeNode[]) => void;
+    }>({
+      nodeInfo: [],
+      setNodeInfo: () => {}
+    });
+    ```
+
+    EXPLANATION: null is preferred because it forces proper Provider usage
+    and prevents accidental usage outside of the Provider context.
