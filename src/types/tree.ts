@@ -1,4 +1,4 @@
 export type TreeNode = {
   value: string;
-  children: TreeNode[] | null;
+  children: TreeNode[];
 };

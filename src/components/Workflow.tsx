@@ -21,6 +21,7 @@ import FloatingConnectionLine from "./Flow/FloatingConnectionLine";
 import useDeepseekAPI from "../hooks/useDeepseekAPI";
 import Searchbar from "../components/SearchBar";
 import type { TreeNode } from "../types/tree";
+import { useNodeContext } from "../context/NodeContext";
 
 const nodeTypes = {
   rootNode: RootNode,
@@ -36,7 +37,7 @@ const edgeTypes = {
 const { initialNodes, initialEdges } = initialElements();
 
 function WorkflowContent() {
-  const { addNodes, addEdges, deleteElements, updateNode, fitView } =
+  const { addNodes, addEdges, deleteElements, updateNode, getNode, fitView } =
     useReactFlow();
   const [nodes, setNodes, defaultOnNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -89,10 +90,15 @@ function WorkflowContent() {
     refNode: Node,
     nodeLayer: { value: string; type: string }[]
   ) {
-    const lastNodePos = refNode.position;
-    console.log(refNode);
-    const width = refNode.measured?.width || 0;
-    const height = refNode.measured?.height || 0;
+    // Get fresh node data from current nodes state
+    const currentNode = getNode(refNode.id);
+    const lastNodePos = currentNode?.position || refNode.position;
+    const width = currentNode?.measured?.width || refNode.measured?.width || 0;
+    const height =
+      currentNode?.measured?.height || refNode.measured?.height || 0;
+
+    console.log("Fresh position:", lastNodePos);
+    console.log("Fresh measurements:", { width, height });
     for (let i = 0; i < nodeLayer.length; i++) {
       const newNode = {
         id: `${refNode.id}-${i}`,
@@ -148,7 +154,7 @@ function WorkflowContent() {
 
   const { CallDeepseek } = useDeepseekAPI();
   const [searchInput, setSearchInput] = useState("");
-  const [context, setContext] = useState<TreeNode[]>([]);
+  const { nodeInfo: context, setNodeInfo: setContext } = useNodeContext();
 
   function GetContextPath(node: Node) {
     return node.id.split("-").map((a) => Number(a));
@@ -158,57 +164,117 @@ function WorkflowContent() {
     if (refNode) {
       let nodeContext: string[] = [];
       let path = GetContextPath(refNode);
-      console.log(path);
-      const p = (path: number[]) => {
-        let currentContext: TreeNode[] | null = context;
+      const PushContext = (path: number[]) => {
+        let currentContext: TreeNode[] = context;
+        console.log(context);
 
         for (let i of path) {
-          if (
-            currentContext &&
-            currentContext[i]
-          ) {
+          console.log(i, currentContext);
+          if (currentContext && currentContext[i]) {
             nodeContext.push(currentContext[i].value);
             currentContext = currentContext[i].children;
           }
         }
       };
 
-      p(path);
+      PushContext(path);
       return nodeContext;
     }
   }
   // 0-1-2-3
 
+  useEffect(() => {
+    console.log(GetContext(suggestionSelectedNode));
+  }, [suggestionSelectedNode]);
+
+  useEffect(() => {
+    console.log(context);
+  }, [context]);
+
+  useEffect(() => {
+    if (suggestionSelectedNode) {
+      CreateLayer(suggestionSelectedNode);
+    }
+  }, [suggestionSelectedNode]);
+
   async function CreateLayer(refNode: Node) {
+    const response = await CallDeepseek(GetContext(suggestionSelectedNode));
+    console.log(response);
+
+    const content = response.choices[0].message.content.split(", ");
+
     let nodeLayer: { value: string; type: string }[] = [];
+    let childrenLayer: TreeNode[] = [];
+    for (let i = 0; i < content.length; i++) {
+      nodeLayer.push({ value: content[i], type: "suggestionNode" });
+      childrenLayer.push({ value: content[i], children: [] });
+    }
+    AddNodeLayer(refNode, nodeLayer);
+
+    const path = GetContextPath(refNode);
+    const newContext = AddChildrenToPath(context, path, childrenLayer);
+
+    setContext(newContext);
+  }
+
+  async function CreateLayerWithContext(
+    refNode: Node,
+    currentContext: TreeNode[]
+  ) {
     const response = await CallDeepseek([searchInput]);
     console.log(response);
 
     const content = response.choices[0].message.content.split(", ");
 
-    let path = GetContextPath(refNode);
+    let nodeLayer: { value: string; type: string }[] = [];
+    let childrenLayer: TreeNode[] = [];
+    for (let i = 0; i < content.length; i++) {
+      nodeLayer.push({ value: content[i], type: "suggestionNode" });
+      childrenLayer.push({ value: content[i], children: [] });
+    }
+    AddNodeLayer(refNode, nodeLayer);
 
-    let currentNode = context[path[0]];
-    for (let i = 1; i < path.length; i++) {
-      currentNode = currentNode.children[path[i]];
+    const path = GetContextPath(refNode);
+    const newContext = AddChildrenToPath(currentContext, path, childrenLayer);
+
+    setContext(newContext);
+  }
+
+  function AddChildrenToPath(
+    tree: TreeNode[],
+    path: number[],
+    newChildren: TreeNode[]
+  ): TreeNode[] {
+    if (path.length === 0) {
+      // Adding to root level
+      return [...tree, ...newChildren];
     }
 
-    setContext((prev) => {
-      let newContext: TreeNode[] = [];
-
-      for (let i = 0; i < content.length; i++) {
-        prev.push({ value: content[i], children: null });
-        nodeLayer.push({ value: content[i], type: "suggestionNode" });
+    return tree.map((node, index) => {
+      if (index === path[0] && node.children) {
+        if (path.length === 1) {
+          // This is the target node, add children
+          return {
+            ...node,
+            children: [...node.children, ...newChildren],
+          };
+        } else {
+          // Recurse deeper
+          return {
+            ...node,
+            children: AddChildrenToPath(
+              node.children,
+              path.slice(1),
+              newChildren
+            ),
+          };
+        }
       }
-      const finalContext: TreeNode[] = [...prev];
-      return prev;
+      return node;
     });
-
-    AddNodeLayer(refNode, nodeLayer);
   }
 
   const CreateRoot = async () => {
-    console.log(2);
     const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     const rootNode = {
       id: `${context.length}`,
@@ -217,45 +283,17 @@ function WorkflowContent() {
       type: "rootNode",
     };
 
-    setContext((prev) => [
-      ...prev,
-      { value: `${searchInput}`, children: null },
-    ]);
+    const newContext = [...context, { value: `${searchInput}`, children: [] }];
+    setContext(newContext);
 
     addNodes(rootNode);
-    CreateLayer(rootNode);
-  };
-
-  //섹스
-  useEffect(() => {
-    console.log(context);
-    const fin_context = GetContext(suggestionSelectedNode);
-    console.log(suggestionSelectedNode);
-    console.log(fin_context);
-  }, [nodes.length, suggestionSelectedNode]);
-
-  const FetchSuggestionData = async (refNode: Node) => {
-    let nodeLayer: { value: string; type: string }[] = [];
-    const response = await CallDeepseek([searchInput]);
-    console.log(response);
-
-    const content = response.choices[0].message.content.split(", ");
-    setContext((prev) => {
-      for (let i = 0; i < content.length; i++) {
-        prev.push({ value: content[i], children: null });
-        nodeLayer.push({ value: content[i], type: "suggestionNode" });
-      }
-      return prev;
-    });
-
-    AddNodeLayer(refNode, nodeLayer);
+    CreateLayerWithContext(rootNode, newContext);
   };
 
   const HandleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     CreateRoot();
-    console.log(1);
     // you cannot immediately call an async function
   };
 

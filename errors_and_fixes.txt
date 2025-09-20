@@ -365,3 +365,130 @@ ERRORS AND FIXES
     EXPLANATION: Immutable updates create new arrays instead of mutating existing ones.
     When run twice, they produce the same result. This is the correct React pattern
     and why StrictMode helps catch mutation bugs early.
+
+16. TypeScript recursive function return type error:
+    ERROR:
+    ```
+    Function implicitly has return type 'any' because it does not have a return
+    type annotation and is referenced directly or indirectly in one of its return expressions.ts(7024)
+    ```
+
+    ISSUE: TypeScript cannot infer the return type of recursive functions because
+    they reference themselves, creating a circular dependency in type inference.
+
+    CAUSE: Missing explicit return type annotation on recursive function.
+
+    EXAMPLE ERROR:
+    ```
+    function addChildrenToPath(tree, path, newChildren) {  // ❌ No return type
+      // ... recursive calls
+      return addChildrenToPath(node.children, path.slice(1), newChildren);
+    }
+    ```
+
+    FIX:
+    ```
+    function addChildrenToPath(
+      tree: TreeNode[],
+      path: number[],
+      newChildren: TreeNode[]
+    ): TreeNode[] {  // ✅ Explicit return type
+      // ... implementation
+    }
+
+    // Or with arrow function:
+    const addChildrenToPath = (
+      tree: TreeNode[],
+      path: number[],
+      newChildren: TreeNode[]
+    ): TreeNode[] => {
+      // ... implementation
+    };
+    ```
+
+    EXPLANATION: TypeScript needs to know the return type before analyzing the
+    function body. Recursive functions create circular references, so explicit
+    return type annotations are required to break the inference cycle.
+
+17. Array.map() missing return statement causing undefined elements:
+    ISSUE: When using Array.map(), every element must return a value. Missing
+    return statements for unmodified elements cause them to become undefined.
+
+    EXAMPLE PROBLEM:
+    ```
+    const result = array.map(item => {
+      if (shouldModify) {
+        return modifiedItem;
+      }
+      // Missing return here - item becomes undefined
+    });
+    // Result: [modifiedItem, undefined, undefined, ...]
+    ```
+
+    CORRECT PATTERN:
+    ```
+    const result = array.map(item => {
+      if (shouldModify) {
+        return modifiedItem;  // Return modified version
+      }
+      return item;           // Return unchanged version
+    });
+    ```
+
+    REAL EXAMPLE:
+    ```
+    return tree.map((node, index) => {
+      if (index === path[0]) {
+        return { ...node, children: [...] };  // Modified node
+      }
+      return node;  // Keep unchanged nodes
+    });
+    ```
+
+    EXPLANATION: Array.map() creates a new array where each element is the
+    return value of the callback function. If no value is returned for an
+    element, it becomes undefined. Always return either the modified or
+    original item to maintain array integrity.
+
+18. React state update timing issue causing stale state access:
+    ERROR:
+    ```
+    setContext([...context, { value: searchInput, children: [] }]);  // 1. Queue state update
+    addNodes(rootNode);                                              // 2. Add visual node
+    CreateLayer(rootNode);                                           // 3. Try to access context[0]
+
+    // Inside CreateLayer:
+    const newContext = AddChildrenToPath(context, path, childrenLayer);  // context is still []
+    ```
+
+    ISSUE: React state updates are asynchronous. When you call setState, the state
+    variable doesn't update immediately. Functions that run right after setState
+    still see the old state value.
+
+    CAUSE: setState queues the update for the next render cycle, but subsequent
+    code executes immediately with the current (stale) state values.
+
+    SYMPTOMS:
+    - Functions accessing state immediately after setState see old values
+    - Array/object operations fail because expected data isn't there yet
+    - "Cannot read property of undefined" errors when accessing nested state
+
+    FIX:
+    ```
+    // Store the new state value in a local variable
+    const newContext = [...context, { value: searchInput, children: [] }];  // 1. Create updated context
+    setContext(newContext);                                                  // 2. Queue state update
+    addNodes(rootNode);                                                      // 3. Add visual node
+    CreateLayerWithContext(rootNode, newContext);                           // 4. Use updated context directly
+
+    // Pass the fresh context to functions that need it
+    function CreateLayerWithContext(refNode: Node, currentContext: TreeNode[]) {
+      const newContext = AddChildrenToPath(currentContext, path, childrenLayer);  // Uses fresh context
+      setContext(newContext);
+    }
+    ```
+
+    EXPLANATION: By storing the updated state in a local variable before calling
+    setState, you can immediately use the new value in subsequent operations.
+    This avoids the timing issue where state updates are asynchronous but your
+    code needs the updated value right away.
