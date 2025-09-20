@@ -150,22 +150,26 @@ function WorkflowContent() {
   const [searchInput, setSearchInput] = useState("");
   const [context, setContext] = useState<TreeNode[]>([]);
 
+  function GetContextPath(node: Node) {
+    return node.id.split("-").map((a) => Number(a));
+  }
+
   function GetContext(refNode: Node | null) {
     if (refNode) {
       let nodeContext: string[] = [];
-      let path = refNode.id.split("-").map((a) => Number(a));
+      let path = GetContextPath(refNode);
       console.log(path);
       const p = (path: number[]) => {
-        if (path.length !== 0 && context) {
-          const pathValue = path.shift() ?? 0;
-          console.log(pathValue);
-          console.log(path);
-          console.log(context);
-          console.log(context[pathValue].children);
-          nodeContext.push(context[pathValue].value);
-          p(path);
-        } else if (path.length === 0) {
-          return nodeContext;
+        let currentContext: TreeNode[] | null = context;
+
+        for (let i of path) {
+          if (
+            currentContext &&
+            currentContext[i]
+          ) {
+            nodeContext.push(currentContext[i].value);
+            currentContext = currentContext[i].children;
+          }
         }
       };
 
@@ -181,11 +185,22 @@ function WorkflowContent() {
     console.log(response);
 
     const content = response.choices[0].message.content.split(", ");
+
+    let path = GetContextPath(refNode);
+
+    let currentNode = context[path[0]];
+    for (let i = 1; i < path.length; i++) {
+      currentNode = currentNode.children[path[i]];
+    }
+
     setContext((prev) => {
+      let newContext: TreeNode[] = [];
+
       for (let i = 0; i < content.length; i++) {
         prev.push({ value: content[i], children: null });
         nodeLayer.push({ value: content[i], type: "suggestionNode" });
       }
+      const finalContext: TreeNode[] = [...prev];
       return prev;
     });
 
@@ -202,16 +217,16 @@ function WorkflowContent() {
       type: "rootNode",
     };
 
-    setContext((prev) => {
-      prev.push({ value: `${searchInput}`, children: null });
-      return prev;
-    });
+    setContext((prev) => [
+      ...prev,
+      { value: `${searchInput}`, children: null },
+    ]);
 
     addNodes(rootNode);
     CreateLayer(rootNode);
   };
 
-//섹스
+  //섹스
   useEffect(() => {
     console.log(context);
     const fin_context = GetContext(suggestionSelectedNode);

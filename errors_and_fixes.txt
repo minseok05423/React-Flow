@@ -331,6 +331,16 @@ ERRORS AND FIXES
     CAUSE: Direct mutation of state object instead of creating new object.
     StrictMode double-execution reveals this side effect.
 
+    DETAILED EXPLANATION:
+    - React StrictMode deliberately executes state setters multiple times in development
+    - This helps identify side effects and impure functions early
+    - push() modifies the existing array reference instead of creating a new one
+    - When React runs the setter again, it's operating on an already-modified array
+    - This causes the new item to be added multiple times
+    - React uses object reference equality to detect state changes
+    - Mutating arrays doesn't change the reference, so React might not trigger re-renders
+    - Always treat React state as immutable to avoid these issues
+
     FIX:
     ```
     // Option 1: Spread operator (recommended)
@@ -344,6 +354,13 @@ ERRORS AND FIXES
       prev.concat({ value: `${searchInput}`, children: null })
     );
     ```
+
+    WHY IMMUTABLE UPDATES WORK:
+    - Creates a completely new array with each update
+    - React can detect the reference change and trigger re-renders
+    - Running the setter multiple times creates the same new array each time
+    - No side effects from previous executions
+    - Follows React's functional programming principles
 
     EXPLANATION: Immutable updates create new arrays instead of mutating existing ones.
     When run twice, they produce the same result. This is the correct React pattern
